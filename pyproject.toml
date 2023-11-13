@@ -1,0 +1,33 @@
+# FILEPATH: /workspaces/dino/pyproject.toml
+
+[project]
+name = "dino"
+version = "0.1.0"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+    # exclude a few common directories in the root of the project
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | venv
+    | \.pytype
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+)
+'''
