@@ -11,3 +11,11 @@ $ isort .
 $ python -m unittest discover -s .
 $ python testing/watch_tests.py dino
 ```
+
+# Terms
+
+spacing/scale
+orientation/rotation
+position/translation
+
+size
