@@ -1,6 +1,17 @@
 import numpy as np
+import pydicom
 
-def load_affine(slices):
+
+def _load_slice(slice: pydicom.Dataset) -> np.ndarray:
+    return slice.pixel_array * slice.RescaleSlope + slice.RescaleIntercept
+
+
+def _sort_slices(slices: list[pydicom.Dataset]) -> list[pydicom.Dataset]:
+    return sorted(slices, key=lambda slice: slice.ImagePositionPatient[2])
+
+
+def load_affine(slices: list[pydicom.Dataset]) -> np.ndarray:
+    slices = _sort_slices(slices)
     first_header = slices[0]
 
     # Position
@@ -25,3 +36,7 @@ def load_affine(slices):
     affine = np.r_[np.c_[rotation_scale, origin], homogeneous_row]
 
     return affine
+
+
+def load_voxels(slices: list[pydicom.Dataset]) -> np.ndarray:
+    return np.stack([_load_slice(slice) for slice in _sort_slices(slices)])
