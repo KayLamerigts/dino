@@ -24,9 +24,8 @@ def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribu
         raise DicomError(f"Not all slices have identical {attribute} values.")
 
 
-def create_spatially_referenced_volumetric_image(
-    slices: list[pydicom.Dataset],
-    load_voxels: bool = True,
+def create_image(
+    slices: list[pydicom.Dataset], load_voxels: bool = True
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     if len(slices) < 2:
         raise DicomError("Not enough slices to create scan.")

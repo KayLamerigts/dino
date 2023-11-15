@@ -1,6 +1,8 @@
+
 [project]
 name = "dino"
 version = "0.1.0"
+authors = [{name = 'Kay Lamerigts'}]
 dependencies = [
   'black',
   'isort',
