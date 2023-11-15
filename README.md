@@ -7,7 +7,7 @@ Lightweight Dicom Numpy Operations in pure Python
 import dino as dn
 
 slices = load_pydicom_slice_from_series()
-image = dn.create_spatially_referenced_volumetric_image(slices)
+image = dn.create_image(slices)
 ```
 
 # Development

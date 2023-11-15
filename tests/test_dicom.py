@@ -22,10 +22,10 @@ class TestLoadAffine(unittest.TestCase):
         slice_two.Rows = 512
         slice_two.Columns = 256
 
-        affine, size, _ = dicom.create_image([slice_one, slice_two], load_voxels=False)
+        image = dicom.create_image([slice_one, slice_two], load_voxels=False)
 
-        np.testing.assert_array_equal(affine, np.eye(4))
-        np.testing.assert_array_equal(size, (2, 512, 256))
+        np.testing.assert_array_equal(image.affine, np.eye(4))
+        np.testing.assert_array_equal(image.size, (2, 512, 256))
 
 
 if __name__ == "__main__":

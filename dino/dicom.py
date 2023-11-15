@@ -3,6 +3,8 @@ import itertools
 import numpy as np
 import pydicom
 
+import dino.image
+
 
 class DicomError(ValueError):
     pass
@@ -24,9 +26,7 @@ def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribu
         raise DicomError(f"Not all slices have identical {attribute} values.")
 
 
-def create_image(
-    slices: list[pydicom.Dataset], load_voxels: bool = True
-) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+def create_image(slices: list[pydicom.Dataset], load_voxels: bool = True) -> dino.image.Image:
     if len(slices) < 2:
         raise DicomError("Not enough slices to create scan.")
 
@@ -96,4 +96,4 @@ def create_image(
     homogeneous_row = np.array([0, 0, 0, 1]).reshape(1, 4)
     affine = np.r_[np.c_[rotation_scale, position], homogeneous_row]
 
-    return affine, size, voxels
+    return dino.image.Image(affine, size, voxels)
