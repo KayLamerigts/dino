@@ -1,4 +1,4 @@
-![logo created with dall-e](docs/logo.jpg)
+![logo created with dall-e](docs/logo.png)
 
 # Dino
 Lightweight Dicom Numpy Operations in pure Python
