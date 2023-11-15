@@ -18,6 +18,7 @@ class TestRunner(FileSystemEventHandler):
             subprocess.run(["isort", *PYTHON_ROOTS])
             subprocess.run(["mypy", "dino"])
             subprocess.run(["python", "-m", "unittest", "discover", "tests"])
+            print(time.strftime("%H:%M:%S"))
 
 
 if __name__ == "__main__":

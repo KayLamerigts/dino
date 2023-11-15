@@ -6,33 +6,32 @@ import pydicom
 import dino.image
 
 
-class DicomError(ValueError):
-    pass
-
-
 def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> None:
     try:
         attribute_values = [getattr(slice, attribute) for slice in slices]
     except AttributeError:
-        raise DicomError(f"Not all slices have {attribute}.")
-    if not all(value for value in attribute_values):
-        raise DicomError(f"Not all slices have {attribute}.")
+        raise ValueError(f"Not all slices have {attribute}.")
+    if not all(value for value in attribute_values if value != 0):
+        raise ValueError(f"Not all slices have valid {attribute}.")
 
 
 def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> None:
     _verify_contains_attribute_per_slice(slices, attribute)
     attribute_values = [getattr(slice, attribute) for slice in slices]
     if not all(value == attribute_values[0] for value in attribute_values):
-        raise DicomError(f"Not all slices have identical {attribute} values.")
+        raise ValueError(f"Not all slices have identical {attribute} values.")
 
 
-def create_image(slices: list[pydicom.Dataset], load_voxels: bool = True) -> dino.image.Image:
+def create_image(slices: list[pydicom.Dataset]) -> dino.image.Image:
     if len(slices) < 2:
-        raise DicomError("Not enough slices to create scan.")
+        raise ValueError("Not enough slices to create scan.")
 
     _verify_identical_attribute_per_slice(slices, "PixelSpacing")
     _verify_identical_attribute_per_slice(slices, "ImageOrientationPatient")
+
     _verify_contains_attribute_per_slice(slices, "ImagePositionPatient")
+    _verify_contains_attribute_per_slice(slices, "RescaleSlope")
+    _verify_contains_attribute_per_slice(slices, "RescaleIntercept")
 
     # Rotation
     orientation_x = np.array(slices[0].ImageOrientationPatient[:3])
@@ -42,7 +41,7 @@ def create_image(slices: list[pydicom.Dataset], load_voxels: bool = True) -> din
     orientation = np.array([orientation_x, orientation_y, orientation_z])
 
     if not np.isclose(np.linalg.det(orientation), 1, atol=1e-6):
-        raise DicomError("Orientation matrix is not orthogonal.")
+        raise ValueError("Orientation matrix is not orthogonal.")
 
     slices = sorted(slices, key=lambda s: np.dot(np.array(s.ImagePositionPatient), orientation_z))
     header = slices[0]
@@ -63,33 +62,25 @@ def create_image(slices: list[pydicom.Dataset], load_voxels: bool = True) -> din
         # Check if the spacing is approximately equal for each slice
         slice_spacing = np.linalg.norm(inter_slice_vector)
         if not np.isclose(slice_spacing, spacing_z, atol=1e-6):
-            raise DicomError("Spacing between slices is not equal.")
+            raise ValueError("Spacing between slices is not equal.")
 
         # Check that the slices are aligned with orientation_z
         slice_spacing_proj = np.abs(np.dot(inter_slice_vector, orientation_z))
         if not np.isclose(slice_spacing_proj, slice_spacing, atol=1e-6):
-            raise DicomError("Slices are not aligned along z-axis.")
+            raise ValueError("Slices are not aligned along z-axis.")
 
         # Redundant check, because all IOP are the same.
         # Check orthogonality of slice orientations with orientation_z
         slice_orientation_x = np.array(slice_prev.ImageOrientationPatient[:3])
         slice_orientation_y = np.array(slice_next.ImageOrientationPatient[3:])
         if not np.isclose(np.dot(slice_orientation_x, orientation_z), 0, atol=1e-6):
-            raise DicomError("Slice x-orientation is not orthogonal to z-axis.")
+            raise ValueError("Slice x-orientation is not orthogonal to z-axis.")
         if not np.isclose(np.dot(slice_orientation_y, orientation_z), 0, atol=1e-6):
-            raise DicomError("Slice y-orientation is not orthogonal to z-axis.")
+            raise ValueError("Slice y-orientation is not orthogonal to z-axis.")
 
     # Voxels & Size
-    if load_voxels:
-        _verify_contains_attribute_per_slice(slices, "RescaleSlope")
-        _verify_contains_attribute_per_slice(slices, "RescaleIntercept")
-        voxels = np.stack([s.pixel_array * s.RescaleSlope + s.RescaleIntercept for s in slices])
-        size = np.array(voxels.shape)
-    else:
-        _verify_identical_attribute_per_slice(slices, "Rows")
-        _verify_identical_attribute_per_slice(slices, "Columns")
-        voxels = None
-        size = np.array([len(slices), header.Rows, header.Columns])
+    voxels = np.stack([s.pixel_array * s.RescaleSlope + s.RescaleIntercept for s in slices])
+    size = np.array(voxels.shape)
 
     # Affine
     rotation_scale = np.dot(orientation, spacing)

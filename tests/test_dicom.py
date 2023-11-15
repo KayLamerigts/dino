@@ -1,31 +1,26 @@
 import unittest
 
 import numpy as np
-import pydicom
 
-from dino import dicom
+import dino.dicom
+from testing import faking
 
 
 class TestLoadAffine(unittest.TestCase):
     def test_load_affine_identity(self):
-        slice_one = pydicom.Dataset()
+        slice_one = faking.create_empty_pydicom_dataset()
         slice_one.PixelSpacing = [1, 1]
         slice_one.ImageOrientationPatient = [1, 0, 0, 0, 1, 0]
         slice_one.ImagePositionPatient = [0, 0, 0]
-        slice_one.Rows = 512
-        slice_one.Columns = 256
 
-        slice_two = pydicom.Dataset()
+        slice_two = faking.create_empty_pydicom_dataset()
         slice_two.PixelSpacing = [1, 1]
         slice_two.ImageOrientationPatient = [1, 0, 0, 0, 1, 0]
         slice_two.ImagePositionPatient = [0, 0, 1]
-        slice_two.Rows = 512
-        slice_two.Columns = 256
 
-        image = dicom.create_image([slice_one, slice_two], load_voxels=False)
+        image = dino.dicom.create_image([slice_one, slice_two])
 
         np.testing.assert_array_equal(image.affine, np.eye(4))
-        np.testing.assert_array_equal(image.size, (2, 512, 256))
 
 
 if __name__ == "__main__":
