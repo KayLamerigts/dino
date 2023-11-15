@@ -10,7 +10,7 @@ class DicomError(ValueError):
 
 def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> bool:
     try:
-        attribute_values = (getattr(slice, attribute) for slice in slices)
+        attribute_values = [getattr(slice, attribute) for slice in slices]
     except AttributeError:
         raise DicomError(f"Not all slices have {attribute}.")
     if not all(value for value in attribute_values):
@@ -18,16 +18,13 @@ def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribut
 
 
 def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> bool:
-    attribute_values = (getattr(slice, attribute) for slice in slices)
+    _verify_contains_attribute_per_slice(slices, attribute)
+    attribute_values = [getattr(slice, attribute) for slice in slices]
     if not all(value == attribute_values[0] for value in attribute_values):
         raise DicomError(f"Not all slices have identical {attribute} values.")
 
 
-def _load_slice(slice: pydicom.Dataset) -> np.ndarray:
-    return slice.pixel_array * slice.RescaleSlope + slice.RescaleIntercept
-
-
-def create_scan(
+def create_spatially_referenced_volumetric_image(
     slices: list[pydicom.Dataset],
     load_voxels: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
@@ -36,10 +33,7 @@ def create_scan(
 
     _verify_identical_attribute_per_slice(slices, "PixelSpacing")
     _verify_identical_attribute_per_slice(slices, "ImageOrientationPatient")
-
     _verify_contains_attribute_per_slice(slices, "ImagePositionPatient")
-    _verify_contains_attribute_per_slice(slices, "RescaleSlope")
-    _verify_contains_attribute_per_slice(slices, "RescaleIntercept")
 
     # Rotation
     orientation_x = np.array(slices[0].ImageOrientationPatient[:3])
@@ -88,7 +82,9 @@ def create_scan(
 
     # Voxels & Size
     if load_voxels:
-        voxels = np.stack([_load_slice(slice) for slice in slices])
+        _verify_contains_attribute_per_slice(slices, "RescaleSlope")
+        _verify_contains_attribute_per_slice(slices, "RescaleIntercept")
+        voxels = np.stack([s.pixel_array * s.RescaleSlope + s.RescaleIntercept for s in slices])
         size = np.array(voxels.shape)
     else:
         _verify_identical_attribute_per_slice(slices, "Rows")

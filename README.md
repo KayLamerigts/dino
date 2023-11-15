@@ -9,7 +9,7 @@ $ pip install .
 $ black .
 $ isort .
 $ python -m unittest discover -s .
-$ python testing/watch_tests.py dino
+$ python testing/watchdog_dev.py
 ```
 
 # Terms

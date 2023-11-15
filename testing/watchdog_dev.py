@@ -1,24 +1,29 @@
 import subprocess
-import sys
 import time
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+PYTHON_ROOTS = ["dino", "testing", "tests"]
 
 
 class TestRunner(FileSystemEventHandler):
     def on_any_event(self, event):
         if event.is_directory:
             return
+        if not event.src_path.endswith(".py"):
+            return
         if event.event_type in ("created", "modified"):
+            subprocess.run(["black", *PYTHON_ROOTS])
+            subprocess.run(["isort", *PYTHON_ROOTS])
             subprocess.run(["python", "-m", "unittest", "discover", "."])
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "."
     event_handler = TestRunner()
     observer = Observer()
-    observer.schedule(event_handler, path, recursive=True)
+    for root in PYTHON_ROOTS:
+        observer.schedule(event_handler, root, recursive=True)
     observer.start()
     try:
         while True:
