@@ -16,7 +16,8 @@ class TestRunner(FileSystemEventHandler):
         if event.event_type in ("created", "modified"):
             subprocess.run(["black", *PYTHON_ROOTS])
             subprocess.run(["isort", *PYTHON_ROOTS])
-            subprocess.run(["python", "-m", "unittest", "discover", "."])
+            subprocess.run(["mypy", "dino"])
+            subprocess.run(["python", "-m", "unittest", "discover", "tests"])
 
 
 if __name__ == "__main__":

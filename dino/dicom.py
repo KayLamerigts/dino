@@ -10,7 +10,7 @@ class DicomError(ValueError):
     pass
 
 
-def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> bool:
+def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> None:
     try:
         attribute_values = [getattr(slice, attribute) for slice in slices]
     except AttributeError:
@@ -19,7 +19,7 @@ def _verify_contains_attribute_per_slice(slices: list[pydicom.Dataset], attribut
         raise DicomError(f"Not all slices have {attribute}.")
 
 
-def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> bool:
+def _verify_identical_attribute_per_slice(slices: list[pydicom.Dataset], attribute: str) -> None:
     _verify_contains_attribute_per_slice(slices, attribute)
     attribute_values = [getattr(slice, attribute) for slice in slices]
     if not all(value == attribute_values[0] for value in attribute_values):

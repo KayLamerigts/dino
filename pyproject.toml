@@ -7,13 +7,16 @@ dependencies = [
   'black',
   'isort',
   'numpy',
+  'mypy',
   'pydicom',
   'watchdog',
 ]
-
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["dino", "testing"]
 
 [tool.black]
 line-length = 100
