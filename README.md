@@ -8,8 +8,14 @@ Lightweight Dicom Numpy Operations in pure Python
 ```python
 import dino as dn
 
-slices = load_pydicom_slice_from_series()
+slices = load_pydicom_slices_from_series()
 image = dn.create_image(slices)
+
+image = dn.resize_image(image, (512, 512, 512))
+image = dn.rescale_image(image, (1, 1, 1))
+image = dn.random_crop_or_pad(image, (64, 64, 64))
+
+
 ```
 
 # Development

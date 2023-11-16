@@ -106,6 +106,7 @@ def rescale(
 
     return _resize_image(image, size, order)
 
+# TODO: different api for crop and pad? (bounds vs before/after)
 
 def crop(image: dino.structs.Image, crop_bounds: npt.ArrayLike) -> dino.structs.Image:
     crop_bounds = np.asarray(crop_bounds)
@@ -130,3 +131,55 @@ def crop(image: dino.structs.Image, crop_bounds: npt.ArrayLike) -> dino.structs.
     affine[:3, 3] = position
 
     return dataclasses.replace(image, voxels=voxels, affine=affine, size=np.array(voxels.shape))
+
+
+def pad(
+    image: dino.structs.Image, pad_width: npt.ArrayLike, pad_value: int | float | None = None
+) -> dino.structs.Image:
+    pad_width = np.asarray(pad_width)
+
+    if pad_width.shape != (2, 3):
+        raise ValueError("pad_width should be a 2x3 matrix")
+    if not np.issubdtype(pad_width.dtype, np.integer):
+        raise ValueError(f"pad_width should be an integer vector")
+
+    before, after = pad_width
+
+    if not np.all(before >= 0):
+        raise ValueError("pad_width should only have positive values")
+    if not np.all(after >= 0):
+        raise ValueError("pad_width should only have positive values")
+
+    pad_value = image.voxels.min() if pad_value is None else pad_value
+    voxels = np.pad(image.voxels, (before, after), mode="constant", constant_values=pad_value)
+    position = (image.affine @ np.array([*-before, 1]))[:3]
+    affine = image.affine.copy()
+    affine[:3, 3] = position
+
+    return dataclasses.replace(image, voxels=voxels, affine=affine, size=np.array(voxels.shape))
+
+
+def canonicalize_reflected_image(image: dino.structs.Image) -> dino.structs.Image:
+    """Canonicalizes an image by reflecting it if necessary.
+
+    Args:
+        image: the image to be canonicalized
+
+    Returns:
+        a newly created image that is canonicalized
+    """
+    # TODO: AI written not done
+    if np.linalg.det(image.orientation) < 0:
+        # flip the image
+        voxels = image.voxels[::-1, :, :]
+        orientation = image.orientation.copy()
+        orientation[0, :] *= -1
+        affine = image.affine.copy()
+        affine[:3, :3] = orientation @ np.diag(image.spacing)
+        image = dataclasses.replace(
+            image,
+            affine=affine,
+            voxels=voxels,
+        )
+
+    return image
