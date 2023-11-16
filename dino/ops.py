@@ -163,7 +163,7 @@ def crop_image(
     raise ValueError("Exactly one of bounds or bbx should be specified.")
 
 
-def pad(
+def pad_image(
     image: dino.structs.Image, pad_width: npt.ArrayLike, *, pad_value: int | float | None = None
 ) -> dino.structs.Image:
     pad_width = np.asarray(pad_width)
