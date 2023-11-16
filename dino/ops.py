@@ -7,7 +7,7 @@ import scipy.ndimage
 import dino.structs
 
 
-def _resize_image(image: dino.structs.Image, size: np.ndarray, order: int) -> dino.structs.Image:
+def _resize(image: dino.structs.Image, size: np.ndarray, order: int) -> dino.structs.Image:
     if image.voxels is None:
         raise ValueError(
             "Image does not have voxels. Try again after loading with `create_image(..., load_voxels=True)`."
@@ -44,14 +44,15 @@ def _resize_image(image: dino.structs.Image, size: np.ndarray, order: int) -> di
     image = dataclasses.replace(
         image,
         affine=affine,
-        size=np.array(voxels_resized.shape[:3]),
         voxels=voxels_resized,
     )
 
     return image
 
 
-def resize(image: dino.structs.Image, size: npt.ArrayLike, order: int = 1) -> dino.structs.Image:
+def resize_image(
+    image: dino.structs.Image, size: npt.ArrayLike, *, order: int = 1
+) -> dino.structs.Image:
     """Creates an images resized to a specific size.
 
     Args:
@@ -71,11 +72,11 @@ def resize(image: dino.structs.Image, size: npt.ArrayLike, order: int = 1) -> di
     if not np.all(size > 0):
         raise ValueError("size should only have positive values")
 
-    return _resize_image(image, size, order)
+    return _resize(image, size, order)
 
 
-def rescale(
-    image: dino.structs.Image, spacing: npt.ArrayLike, order: int = 1
+def rescale_image(
+    image: dino.structs.Image, spacing: npt.ArrayLike, *, order: int = 1
 ) -> dino.structs.Image:
     """Creates an images rescaled close to a specific spacing.
 
@@ -104,19 +105,16 @@ def rescale(
 
     size = np.round(apx_size).astype(int)
 
-    return _resize_image(image, size, order)
+    return _resize(image, size, order)
 
-# TODO: different api for crop and pad? (bounds vs before/after)
 
-def crop(image: dino.structs.Image, crop_bounds: npt.ArrayLike) -> dino.structs.Image:
-    crop_bounds = np.asarray(crop_bounds)
-
-    if crop_bounds.shape != (2, 3):
+def _crop_by_bounds(image: dino.structs.Image, bounds: np.ndarray) -> dino.structs.Image:
+    if bounds.shape != (2, 3):
         raise ValueError("crop_bounds should be a 2x3 matrix")
-    if not np.issubdtype(crop_bounds.dtype, np.integer):
+    if not np.issubdtype(bounds.dtype, np.integer):
         raise ValueError(f"crop_bounds should be an integer vector")
 
-    start, end = crop_bounds
+    start, end = bounds
 
     if not np.all(start >= 0):
         raise ValueError("crop_bounds should only have positive values")
@@ -130,11 +128,43 @@ def crop(image: dino.structs.Image, crop_bounds: npt.ArrayLike) -> dino.structs.
     affine = image.affine.copy()
     affine[:3, 3] = position
 
-    return dataclasses.replace(image, voxels=voxels, affine=affine, size=np.array(voxels.shape))
+    return dataclasses.replace(image, voxels=voxels, affine=affine)
+
+
+def _crop_by_bbx(image: dino.structs.Image, bbx: np.ndarray) -> dino.structs.Image:
+    if bbx.shape != (2, 3):
+        raise ValueError("bbx should be a 2x3 matrix")
+    if not np.issubdtype(bbx.dtype, np.integer):
+        raise ValueError(f"bbx should be an integer vector")
+
+    start, size = bbx
+
+    if not np.all(start >= 0):
+        raise ValueError("bbx should only have positive values")
+    if not np.all(start + size <= image.size):
+        raise ValueError("bbx should be smaller than the image size")
+    if not np.all(size > 0):
+        raise ValueError("bbx should have positive size")
+
+    return _crop_by_bounds(image, np.array([start, start + size]))
+
+
+def crop_image(
+    image: dino.structs.Image,
+    *,
+    bounds: npt.ArrayLike | None = None,
+    bbx: npt.ArrayLike | None = None,
+) -> dino.structs.Image:
+    if bounds is not None:
+        return _crop_by_bounds(image, np.asarray(bounds))
+    elif bbx is not None:
+        return _crop_by_bbx(image, np.asarray(bbx))
+
+    raise ValueError("Exactly one of bounds or bbx should be specified.")
 
 
 def pad(
-    image: dino.structs.Image, pad_width: npt.ArrayLike, pad_value: int | float | None = None
+    image: dino.structs.Image, pad_width: npt.ArrayLike, *, pad_value: int | float | None = None
 ) -> dino.structs.Image:
     pad_width = np.asarray(pad_width)
 
@@ -156,11 +186,11 @@ def pad(
     affine = image.affine.copy()
     affine[:3, 3] = position
 
-    return dataclasses.replace(image, voxels=voxels, affine=affine, size=np.array(voxels.shape))
+    return dataclasses.replace(image, voxels=voxels, affine=affine)
 
 
-def canonicalize_reflected_image(image: dino.structs.Image) -> dino.structs.Image:
-    """Canonicalizes an image by reflecting it if necessary.
+def canonicalize_mirrored_image(image: dino.structs.Image) -> dino.structs.Image:
+    """Canonicalizes an image by mirroring it if necessary.
 
     Args:
         image: the image to be canonicalized
@@ -168,18 +198,16 @@ def canonicalize_reflected_image(image: dino.structs.Image) -> dino.structs.Imag
     Returns:
         a newly created image that is canonicalized
     """
-    # TODO: AI written not done
-    if np.linalg.det(image.orientation) < 0:
-        # flip the image
-        voxels = image.voxels[::-1, :, :]
-        orientation = image.orientation.copy()
-        orientation[0, :] *= -1
-        affine = image.affine.copy()
-        affine[:3, :3] = orientation @ np.diag(image.spacing)
-        image = dataclasses.replace(
-            image,
-            affine=affine,
-            voxels=voxels,
-        )
+    is_axis_aligned = np.all(image.orientation == np.diag(np.diag(image.orientation)))
+    if not is_axis_aligned:
+        raise NotImplementedError("Non axis aligned images are not supported.")
 
-    return image
+    flipped_axes = np.where(np.diag(image.orientation) < 0)[0]
+    if len(flipped_axes) == 0:
+        return image
+
+    canonical_voxels = np.flip(image.voxels, axis=flipped_axes)
+    canonical_affine = image.affine.copy()
+    canonical_affine[:3, flipped_axes] *= -1
+
+    return dataclasses.replace(image, voxels=canonical_voxels, affine=canonical_affine)

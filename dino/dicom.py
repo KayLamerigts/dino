@@ -80,13 +80,12 @@ def create_image(slices: list[pydicom.Dataset]) -> dino.structs.Image:
         if not np.isclose(slice_orientation_y @ orientation_z, 0, atol=ATOL):
             raise ValueError("Slice y-orientation is not orthogonal to z-axis.")
 
-    # Voxels & Size
+    # Voxels
     voxels = np.stack([s.pixel_array * s.RescaleSlope + s.RescaleIntercept for s in slices])
-    size = np.array(voxels.shape)
 
     # Affine
     rotation_scale = orientation @ spacing
     homogeneous_row = np.array([0, 0, 0, 1]).reshape(1, 4)
     affine = np.r_[np.c_[rotation_scale, position], homogeneous_row]
 
-    return dino.structs.Image(affine, size, voxels)
+    return dino.structs.Image(affine, voxels)

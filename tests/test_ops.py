@@ -12,11 +12,11 @@ class TestResizeImage(unittest.TestCase):
         self.image = faking.create_fake_image((16, 16, 16))
 
     def test_same_size(self):
-        image_resized = dino.ops.resize(self.image, (16, 16, 16))
+        image_resized = dino.ops.resize_image(self.image, (16, 16, 16))
         self.assertEqual(image_resized, self.image)
 
     def test_smaller_size(self):
-        image_resized = dino.ops.resize(self.image, (8, 8, 8))
+        image_resized = dino.ops.resize_image(self.image, (8, 8, 8))
         np.testing.assert_array_equal(image_resized.size, (8, 8, 8))
 
 
@@ -26,9 +26,9 @@ class TestCropImage(unittest.TestCase):
         self.image = faking.create_fake_image((16, 16, 16))
 
     def test_same_size(self):
-        image_cropped = dino.ops.crop(self.image, ((0, 0, 0), (16, 16, 16)))
+        image_cropped = dino.ops.crop_image(self.image, bounds=((0, 0, 0), (16, 16, 16)))
         self.assertEqual(image_cropped, self.image)
 
     def test_smaller_size(self):
-        image_cropped = dino.ops.crop(self.image, ((0, 0, 0), (8, 8, 8)))
+        image_cropped = dino.ops.crop_image(self.image, bounds=((0, 0, 0), (8, 8, 8)))
         np.testing.assert_array_equal(image_cropped.size, (8, 8, 8))

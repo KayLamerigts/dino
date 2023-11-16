@@ -11,26 +11,21 @@ class Image:
 
     Attributes:
         affine: A 4x4 affine transformation matrix that maps voxel coordinates to world coordinates.
-        size: A 3-element array representing the size of the image in voxels along each axis.
         voxels: An array representing the volumetric image data.
     """
 
     affine: np.ndarray  # 4x4
-    size: np.ndarray  # 3
     voxels: np.ndarray  # DxHxW
 
     def __post_init__(self):
         if self.affine.shape != (4, 4):
             raise ValueError(
-                f"Affine matrix must have shape (4, 4), but got shape {self.affine.shape}"
+                f"Affine matrix must have shape 4x4, but got shape {self.affine.shape}"
             )
-        if self.size.shape != (3,):
-            raise ValueError(f"Size must have shape (3,), but got shape {self.size.shape}")
         if len(self.voxels.shape) != 3:
             raise ValueError(f"Voxels must have shape DxHxW, but got shape {self.voxels.shape}")
 
         self.affine.setflags(write=False)
-        self.size.setflags(write=False)
         self.voxels.setflags(write=False)
 
     def __eq__(self, other: object) -> bool:
@@ -39,15 +34,17 @@ class Image:
 
         return (
             dino.utils.allclose_with_shape_check(self.voxels, other.voxels)
-            and np.allclose(self.size, other.size)
             and np.allclose(self.affine, other.affine)
             # and self.voxels.dtype == other.voxels.dtype
-            # and self.size.dtype == other.size.dtype
             # and self.affine.dtype == other.affine.dtype
         )
 
     @property
-    def origin(self) -> np.ndarray:
+    def size(self) -> np.ndarray:  # 3
+        return np.array(self.voxels.shape)
+
+    @property
+    def origin(self) -> np.ndarray:  # 3
         return self.affine[:3, 3]
 
     @property
