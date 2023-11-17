@@ -211,3 +211,12 @@ def canonicalize_mirrored_image(image: dino.structs.Image) -> dino.structs.Image
     canonical_affine[:3, flipped_axes] *= -1
 
     return dataclasses.replace(image, voxels=canonical_voxels, affine=canonical_affine)
+
+
+def canonicalize_image_orientation(
+    image: dino.structs.Image,
+    *,
+    mode: str = "outer",
+    pad_value: int | float | None = None,
+) -> dino.structs.Image:
+    raise NotImplementedError("Not implemented yet.")

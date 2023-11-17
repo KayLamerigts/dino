@@ -7,7 +7,7 @@ import dino.utils
 
 @dataclasses.dataclass(frozen=True)
 class Image:
-    """A class representing a spatially referenced volumetric image with or without multiple channels.
+    """A class representing a spatially referenced volumetric image.
 
     Attributes:
         affine: A 4x4 affine transformation matrix that maps voxel coordinates to world coordinates.
